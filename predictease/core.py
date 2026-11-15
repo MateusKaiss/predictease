@@ -1,7 +1,8 @@
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 
+from .analysis.metrics import evaluate_forecast
 from .analysis.reader import TimeSeriesDataset, load_data
 from .analysis.visualization import (
     plot_endogenous,
@@ -12,13 +13,26 @@ from .models.arima import ARIMAModel
 from .models.baseline import MeanModel, NaiveModel, SeasonalNaiveModel
 from .models.ml_models import MLModel
 from .models.prophet import ProphetModel
+from .seed import set_seed
 
 
 def load_and_prepare_data(
-    endog_path: str, exog_path: Optional[str] = None
+    endog_path: str,
+    exog_path: Optional[str] = None,
+    inmet: bool = False,
+    utc_offset: int = -3,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
 ) -> Tuple[TimeSeriesDataset, pd.Series]:
     print(f'Loading endogenous data from: {endog_path}')
-    data: TimeSeriesDataset = load_data(endog_path, exog_path)
+    data: TimeSeriesDataset = load_data(
+        endog_path,
+        exog_path,
+        inmet=inmet,
+        utc_offset=utc_offset,
+        start=start,
+        end=end,
+    )
 
     df = data.endog.copy()
     df['date'] = pd.to_datetime(df['date'])
@@ -45,6 +59,11 @@ def get_model(
     batch_size: int,
     hidden_units: int,
     activation: str,
+    non_negative: bool = False,
+    hidden_layers: Optional[List[int]] = None,
+    seed: Optional[int] = None,
+    l2: float = 0.0,
+    dropout: float = 0.0,
 ) -> Union[
     ARIMAModel,
     ProphetModel,
@@ -54,8 +73,13 @@ def get_model(
     Tuple[object, pd.DataFrame],
     object,
 ]:
+    if seed is not None:
+        set_seed(seed, deep_learning=model_name in ['lstm', 'mlp'])
+
     if model_name == 'arima':
         print('\n Training ARIMA model...')
+        if seasonal_length is not None and seasonal_length > 1:
+            return ARIMAModel(seasonal=True, m=seasonal_length)
         return ARIMAModel()
 
     elif model_name == 'prophet':
@@ -89,7 +113,7 @@ def get_model(
         exog.set_index('date', inplace=True)
         X = exog.reindex(y.index).fillna(method='ffill')
 
-        model = MLModel(model_type=model_name)
+        model = MLModel(model_type=model_name, random_state=seed)
         model.fit(X, y)
         return model, exog
 
@@ -110,6 +134,9 @@ def get_model(
                 batch_size=batch_size,
                 hidden_units=hidden_units,
                 activation=activation,
+                hidden_layers=hidden_layers,
+                l2=l2,
+                dropout=dropout,
             )
             model.fit(X, y)
             return model, exog
@@ -124,12 +151,27 @@ def get_model(
                 batch_size=batch_size,
                 hidden_units=hidden_units,
                 activation=activation,
+                hidden_layers=hidden_layers,
+                l2=l2,
+                dropout=dropout,
+                non_negative=non_negative,
             )
             model.fit(y)
             return model
 
     else:
         raise ValueError(f'Model "{model_name}" is not implemented.')
+
+
+def clip_forecast(
+    forecast: Union[pd.Series, pd.DataFrame]
+) -> Union[pd.Series, pd.DataFrame]:
+    if isinstance(forecast, pd.DataFrame):
+        forecast = forecast.copy()
+        columns = forecast.select_dtypes('number').columns
+        forecast[columns] = forecast[columns].clip(lower=0)
+        return forecast
+    return forecast.clip(lower=0)
 
 
 def run_model(
@@ -144,6 +186,11 @@ def run_model(
     hidden_units: int,
     activation: str,
     future_exog: Optional[pd.DataFrame] = None,
+    non_negative: bool = False,
+    hidden_layers: Optional[List[int]] = None,
+    seed: Optional[int] = None,
+    l2: float = 0.0,
+    dropout: float = 0.0,
 ):
     result = get_model(
         model,
@@ -155,6 +202,11 @@ def run_model(
         batch_size,
         hidden_units,
         activation,
+        non_negative=non_negative,
+        hidden_layers=hidden_layers,
+        seed=seed,
+        l2=l2,
+        dropout=dropout,
     )
 
     if isinstance(result, tuple):
@@ -169,12 +221,16 @@ def run_model(
             )
             X_future = exog.iloc[-forecast_steps:]
 
-        return m.predict(X_future)
+        forecast = m.predict(X_future)
+    else:
+        m = result
+        if model in ['arima', 'prophet', 'naive', 'mean', 'seasonal_naive']:
+            m.fit(y)
+        forecast = m.predict(steps=forecast_steps)
 
-    m = result
-    if model in ['arima', 'prophet']:
-        m.fit(y)
-    return m.predict(steps=forecast_steps)
+    if non_negative:
+        forecast = clip_forecast(forecast)
+    return forecast
 
 
 def run(
@@ -184,14 +240,31 @@ def run(
     explore: bool = False,
     model: Optional[str] = None,
     forecast_steps: int = 10,
-    seasonal_length: Optional[int] = 12,
+    seasonal_length: Optional[int] = None,
     window_size: int = 12,
     epochs: int = 100,
     batch_size: int = 16,
     hidden_units: int = 64,
     activation: str = 'relu',
+    non_negative: bool = False,
+    hidden_layers: Optional[List[int]] = None,
+    seed: Optional[int] = None,
+    l2: float = 0.0,
+    dropout: float = 0.0,
+    inmet: bool = False,
+    utc_offset: int = -3,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    test_size: Optional[int] = None,
 ):
-    data, y = load_and_prepare_data(endog_path, exog_path)
+    data, y = load_and_prepare_data(
+        endog_path,
+        exog_path,
+        inmet=inmet,
+        utc_offset=utc_offset,
+        start=start,
+        end=end,
+    )
 
     if explore:
         explore_data(data)
@@ -203,6 +276,11 @@ def run(
         print(f'Loading future exogenous data from: {future_exog_path}')
         future_exog = pd.read_csv(future_exog_path, parse_dates=['date'])
         future_exog.set_index('date', inplace=True)
+
+    y_test = None
+    if test_size:
+        y, y_test = y.iloc[:-test_size], y.iloc[-test_size:]
+        forecast_steps = test_size
 
     forecast = run_model(
         model=model,
@@ -216,6 +294,19 @@ def run(
         hidden_units=hidden_units,
         activation=activation,
         future_exog=future_exog,
+        non_negative=non_negative,
+        hidden_layers=hidden_layers,
+        seed=seed,
+        l2=l2,
+        dropout=dropout,
     )
 
     print(f'\n Forecast:\n{forecast}')
+
+    if y_test is not None:
+        metrics = evaluate_forecast(y_test, forecast)
+        print(f'\n Test size: {test_size}')
+        print(f" MAE: {metrics['mae']:.2f}")
+        print(f" RMSE: {metrics['rmse']:.2f}")
+
+    return forecast

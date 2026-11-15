@@ -11,6 +11,7 @@ class ARIMAModel:
         self.model = None
         self.fitted_model = None
         self.order = None
+        self.seasonal_order = None
 
     def fit(self, y: pd.Series):
         auto_model = auto_arima(
@@ -23,12 +24,19 @@ class ARIMAModel:
             max_order=self.max_order,
         )
         self.order = auto_model.order
+        self.seasonal_order = auto_model.seasonal_order
 
-        self.model = StatsmodelsARIMA(y, order=self.order)
+        self.model = StatsmodelsARIMA(
+            y, order=self.order, seasonal_order=self.seasonal_order
+        )
         self.fitted_model = self.model.fit()
 
     def predict(self, steps: int = 1) -> pd.Series:
         if self.fitted_model is None:
             raise RuntimeError('You need to call `.fit()` before predicting.')
         print(f' Auto ARIMA selected order: {self.order}')
+        if self.seasonal:
+            print(
+                f' Auto ARIMA selected seasonal order: {self.seasonal_order}'
+            )
         return self.fitted_model.forecast(steps=steps)

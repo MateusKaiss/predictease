@@ -64,11 +64,36 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--hidden_layers',
+        type=int,
+        nargs='+',
+        default=None,
+        help=(
+            'Units of each hidden layer in LSTM/MLP (e.g., 64 64). '
+            'Overrides --hidden_units'
+        ),
+    )
+
+    parser.add_argument(
         '--activation',
         type=str,
         default='relu',
         choices=['relu', 'tanh', 'sigmoid', 'linear'],
         help='Activation function for neural networks',
+    )
+
+    parser.add_argument(
+        '--l2',
+        type=float,
+        default=0.0,
+        help='L2 regularization factor for neural network weights',
+    )
+
+    parser.add_argument(
+        '--dropout',
+        type=float,
+        default=0.0,
+        help='Dropout rate after each hidden layer of neural networks',
     )
 
     parser.add_argument(
@@ -96,7 +121,7 @@ def parse_args():
         '--seasonal_length',
         type=int,
         default=None,
-        help='Season length for seasonal naive model (e.g., 12 for monthly data with yearly seasonality)',
+        help='Season length for arima and seasonal naive models (e.g., 12 for monthly data with yearly seasonality)',
     )
 
     parser.add_argument(
@@ -104,6 +129,59 @@ def parse_args():
         type=str,
         default=None,
         help='CSV file containing exogenous variables for forecasting (required for ML and NN models)',
+    )
+
+    parser.add_argument(
+        '--non_negative',
+        action='store_true',
+        help='Clip forecasts at zero (e.g., for irradiance or demand series)',
+    )
+
+    parser.add_argument(
+        '--seed',
+        type=int,
+        default=None,
+        help='Random seed for reproducible results',
+    )
+
+    parser.add_argument(
+        '--inmet',
+        action='store_true',
+        help=(
+            'Read endog_path as a raw INMET station file '
+            '(UTC to local time, kJ/m2 to W/m2)'
+        ),
+    )
+
+    parser.add_argument(
+        '--utc_offset',
+        type=int,
+        default=-3,
+        help='Local time offset from UTC in hours for INMET files',
+    )
+
+    parser.add_argument(
+        '--start',
+        type=str,
+        default=None,
+        help='First date of the INMET series to use (e.g., 2024-01-01)',
+    )
+
+    parser.add_argument(
+        '--end',
+        type=str,
+        default=None,
+        help='Last date of the INMET series to use (e.g., 2024-04-01)',
+    )
+
+    parser.add_argument(
+        '--test_size',
+        type=int,
+        default=None,
+        help=(
+            'Hold out the last observations, forecast them and report '
+            'MAE and RMSE. Overrides --forecast_steps'
+        ),
     )
 
     return parser.parse_args()

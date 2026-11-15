@@ -6,12 +6,12 @@ from xgboost import XGBRegressor
 
 
 class MLModel:
-    def __init__(self, model_type='linear'):
+    def __init__(self, model_type='linear', random_state=None):
         model_map = {
             'linear': LinearRegression(),
-            'rf': RandomForestRegressor(),
-            'xgb': XGBRegressor(),
-            'lgbm': LGBMRegressor(),
+            'rf': RandomForestRegressor(random_state=random_state),
+            'xgb': XGBRegressor(random_state=random_state),
+            'lgbm': LGBMRegressor(random_state=random_state),
         }
 
         if model_type not in model_map:

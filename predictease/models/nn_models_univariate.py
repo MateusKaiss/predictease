@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.layers import LSTM, Dense
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
+
+from .nn_builders import build_lstm, build_mlp
 
 
 class LSTMModel:
@@ -14,12 +13,20 @@ class LSTMModel:
         batch_size=16,
         hidden_units=64,
         activation='relu',
+        hidden_layers=None,
+        l2=0.0,
+        dropout=0.0,
+        non_negative=False,
     ):
         self.window_size = window_size
         self.epochs = epochs
         self.batch_size = batch_size
         self.hidden_units = hidden_units
         self.activation = activation
+        self.hidden_layers = hidden_layers or [hidden_units]
+        self.l2 = l2
+        self.dropout = dropout
+        self.non_negative = non_negative
         self.scaler = MinMaxScaler()
         self.model = None
         self.last_window = None
@@ -42,17 +49,13 @@ class LSTMModel:
         X, y_seq = self._create_sequences(scaled_y)
         X = X.reshape((X.shape[0], X.shape[1], 1))
 
-        self.model = Sequential(
-            [
-                LSTM(
-                    self.hidden_units,
-                    activation=self.activation,
-                    input_shape=(self.window_size, 1),
-                ),
-                Dense(1),
-            ]
+        self.model = build_lstm(
+            (self.window_size, 1),
+            self.hidden_layers,
+            self.activation,
+            l2=self.l2,
+            dropout=self.dropout,
         )
-        self.model.compile(optimizer=Adam(), loss='mse')
         self.model.fit(
             X, y_seq, epochs=self.epochs, batch_size=self.batch_size, verbose=0
         )
@@ -64,11 +67,14 @@ class LSTMModel:
             raise RuntimeError('Model must be fit before predicting.')
 
         window = self.last_window.copy()
+        lower_bound = self.scaler.transform([[0.0]])[0][0]
         preds = []
 
         for _ in range(steps):
             X_input = window.reshape((1, self.window_size, 1))
             pred = self.model.predict(X_input, verbose=0)[0][0]
+            if self.non_negative:
+                pred = max(pred, lower_bound)
             preds.append(pred)
             window = np.append(window[1:], pred)
 
@@ -86,12 +92,20 @@ class MLPModel:
         batch_size=16,
         hidden_units=64,
         activation='relu',
+        hidden_layers=None,
+        l2=0.0,
+        dropout=0.0,
+        non_negative=False,
     ):
         self.window_size = window_size
         self.epochs = epochs
         self.batch_size = batch_size
         self.hidden_units = hidden_units
         self.activation = activation
+        self.hidden_layers = hidden_layers or [hidden_units]
+        self.l2 = l2
+        self.dropout = dropout
+        self.non_negative = non_negative
         self.scaler = MinMaxScaler()
         self.model = None
         self.last_window = None
@@ -113,17 +127,13 @@ class MLPModel:
         scaled_y = self.scaler.fit_transform(y.values.reshape(-1, 1)).flatten()
         X, y_seq = self._create_sequences(scaled_y)
 
-        self.model = Sequential(
-            [
-                Dense(
-                    self.hidden_units,
-                    activation=self.activation,
-                    input_shape=(self.window_size,),
-                ),
-                Dense(1),
-            ]
+        self.model = build_mlp(
+            self.window_size,
+            self.hidden_layers,
+            self.activation,
+            l2=self.l2,
+            dropout=self.dropout,
         )
-        self.model.compile(optimizer=Adam(), loss='mse')
         self.model.fit(
             X, y_seq, epochs=self.epochs, batch_size=self.batch_size, verbose=0
         )
@@ -135,11 +145,14 @@ class MLPModel:
             raise RuntimeError('Model must be fit before predicting.')
 
         window = self.last_window.copy()
+        lower_bound = self.scaler.transform([[0.0]])[0][0]
         preds = []
 
         for _ in range(steps):
             X_input = window.reshape((1, self.window_size))
             pred = self.model.predict(X_input, verbose=0)[0][0]
+            if self.non_negative:
+                pred = max(pred, lower_bound)
             preds.append(pred)
             window = np.append(window[1:], pred)
 

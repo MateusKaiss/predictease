@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.layers import LSTM, Dense
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
+
+from .nn_builders import build_lstm, build_mlp
 
 
 class LSTMModel:
@@ -14,12 +13,18 @@ class LSTMModel:
         batch_size=16,
         hidden_units=64,
         activation='relu',
+        hidden_layers=None,
+        l2=0.0,
+        dropout=0.0,
     ):
         self.window_size = window_size
         self.epochs = epochs
         self.batch_size = batch_size
         self.hidden_units = hidden_units
         self.activation = activation
+        self.hidden_layers = hidden_layers or [hidden_units]
+        self.l2 = l2
+        self.dropout = dropout
         self.scaler_X = MinMaxScaler()
         self.scaler_y = MinMaxScaler()
         self.model = None
@@ -40,17 +45,13 @@ class LSTMModel:
             (X_scaled.shape[0], 1, X_scaled.shape[1])
         )  # (samples, time_step=1, features)
 
-        self.model = Sequential(
-            [
-                LSTM(
-                    self.hidden_units,
-                    activation=self.activation,
-                    input_shape=(1, X_seq.shape[2]),
-                ),
-                Dense(1),
-            ]
+        self.model = build_lstm(
+            (1, X_seq.shape[2]),
+            self.hidden_layers,
+            self.activation,
+            l2=self.l2,
+            dropout=self.dropout,
         )
-        self.model.compile(optimizer=Adam(), loss='mse')
         self.model.fit(
             X_seq,
             y_scaled,
@@ -80,12 +81,18 @@ class MLPModel:
         batch_size=16,
         hidden_units=64,
         activation='relu',
+        hidden_layers=None,
+        l2=0.0,
+        dropout=0.0,
     ):
         self.window_size = window_size
         self.epochs = epochs
         self.batch_size = batch_size
         self.hidden_units = hidden_units
         self.activation = activation
+        self.hidden_layers = hidden_layers or [hidden_units]
+        self.l2 = l2
+        self.dropout = dropout
         self.scaler_X = MinMaxScaler()
         self.scaler_y = MinMaxScaler()
         self.model = None
@@ -102,17 +109,13 @@ class MLPModel:
             y.values.reshape(-1, 1)
         ).flatten()
 
-        self.model = Sequential(
-            [
-                Dense(
-                    self.hidden_units,
-                    activation=self.activation,
-                    input_shape=(X_scaled.shape[1],),
-                ),
-                Dense(1),
-            ]
+        self.model = build_mlp(
+            X_scaled.shape[1],
+            self.hidden_layers,
+            self.activation,
+            l2=self.l2,
+            dropout=self.dropout,
         )
-        self.model.compile(optimizer=Adam(), loss='mse')
         self.model.fit(
             X_scaled,
             y_scaled,
