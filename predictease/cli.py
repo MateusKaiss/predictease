@@ -174,4 +174,14 @@ def parse_args():
         help='Last date of the INMET series to use (e.g., 2024-04-01)',
     )
 
+    parser.add_argument(
+        '--test_size',
+        type=int,
+        default=None,
+        help=(
+            'Hold out the last observations, forecast them and report '
+            'MAE and RMSE. Overrides --forecast_steps'
+        ),
+    )
+
     return parser.parse_args()

@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 
+from .analysis.metrics import evaluate_forecast
 from .analysis.reader import TimeSeriesDataset, load_data
 from .analysis.visualization import (
     plot_endogenous,
@@ -254,6 +255,7 @@ def run(
     utc_offset: int = -3,
     start: Optional[str] = None,
     end: Optional[str] = None,
+    test_size: Optional[int] = None,
 ):
     data, y = load_and_prepare_data(
         endog_path,
@@ -275,6 +277,11 @@ def run(
         future_exog = pd.read_csv(future_exog_path, parse_dates=['date'])
         future_exog.set_index('date', inplace=True)
 
+    y_test = None
+    if test_size:
+        y, y_test = y.iloc[:-test_size], y.iloc[-test_size:]
+        forecast_steps = test_size
+
     forecast = run_model(
         model=model,
         data=data,
@@ -295,3 +302,11 @@ def run(
     )
 
     print(f'\n Forecast:\n{forecast}')
+
+    if y_test is not None:
+        metrics = evaluate_forecast(y_test, forecast)
+        print(f'\n Test size: {test_size}')
+        print(f" MAE: {metrics['mae']:.2f}")
+        print(f" RMSE: {metrics['rmse']:.2f}")
+
+    return forecast
