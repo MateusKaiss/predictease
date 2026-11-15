@@ -56,6 +56,8 @@ def get_model(
 ]:
     if model_name == 'arima':
         print('\n Training ARIMA model...')
+        if seasonal_length is not None and seasonal_length > 1:
+            return ARIMAModel(seasonal=True, m=seasonal_length)
         return ARIMAModel()
 
     elif model_name == 'prophet':
@@ -184,7 +186,7 @@ def run(
     explore: bool = False,
     model: Optional[str] = None,
     forecast_steps: int = 10,
-    seasonal_length: Optional[int] = 12,
+    seasonal_length: Optional[int] = None,
     window_size: int = 12,
     epochs: int = 100,
     batch_size: int = 16,

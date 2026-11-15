@@ -96,7 +96,7 @@ def parse_args():
         '--seasonal_length',
         type=int,
         default=None,
-        help='Season length for seasonal naive model (e.g., 12 for monthly data with yearly seasonality)',
+        help='Season length for arima and seasonal naive models (e.g., 12 for monthly data with yearly seasonality)',
     )
 
     parser.add_argument(
