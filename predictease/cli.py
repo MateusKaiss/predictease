@@ -144,4 +144,34 @@ def parse_args():
         help='Random seed for reproducible results',
     )
 
+    parser.add_argument(
+        '--inmet',
+        action='store_true',
+        help=(
+            'Read endog_path as a raw INMET station file '
+            '(UTC to local time, kJ/m2 to W/m2)'
+        ),
+    )
+
+    parser.add_argument(
+        '--utc_offset',
+        type=int,
+        default=-3,
+        help='Local time offset from UTC in hours for INMET files',
+    )
+
+    parser.add_argument(
+        '--start',
+        type=str,
+        default=None,
+        help='First date of the INMET series to use (e.g., 2024-01-01)',
+    )
+
+    parser.add_argument(
+        '--end',
+        type=str,
+        default=None,
+        help='Last date of the INMET series to use (e.g., 2024-04-01)',
+    )
+
     return parser.parse_args()

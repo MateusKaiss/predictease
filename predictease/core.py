@@ -16,10 +16,22 @@ from .seed import set_seed
 
 
 def load_and_prepare_data(
-    endog_path: str, exog_path: Optional[str] = None
+    endog_path: str,
+    exog_path: Optional[str] = None,
+    inmet: bool = False,
+    utc_offset: int = -3,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
 ) -> Tuple[TimeSeriesDataset, pd.Series]:
     print(f'Loading endogenous data from: {endog_path}')
-    data: TimeSeriesDataset = load_data(endog_path, exog_path)
+    data: TimeSeriesDataset = load_data(
+        endog_path,
+        exog_path,
+        inmet=inmet,
+        utc_offset=utc_offset,
+        start=start,
+        end=end,
+    )
 
     df = data.endog.copy()
     df['date'] = pd.to_datetime(df['date'])
@@ -238,8 +250,19 @@ def run(
     seed: Optional[int] = None,
     l2: float = 0.0,
     dropout: float = 0.0,
+    inmet: bool = False,
+    utc_offset: int = -3,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
 ):
-    data, y = load_and_prepare_data(endog_path, exog_path)
+    data, y = load_and_prepare_data(
+        endog_path,
+        exog_path,
+        inmet=inmet,
+        utc_offset=utc_offset,
+        start=start,
+        end=end,
+    )
 
     if explore:
         explore_data(data)
