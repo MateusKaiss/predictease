@@ -174,7 +174,7 @@ def run_model(
         return m.predict(X_future)
 
     m = result
-    if model in ['arima', 'prophet']:
+    if model in ['arima', 'prophet', 'naive', 'mean', 'seasonal_naive']:
         m.fit(y)
     return m.predict(steps=forecast_steps)
 
