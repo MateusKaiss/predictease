@@ -123,4 +123,11 @@ def parse_args():
         help='Clip forecasts at zero (e.g., for irradiance or demand series)',
     )
 
+    parser.add_argument(
+        '--seed',
+        type=int,
+        default=None,
+        help='Random seed for reproducible results',
+    )
+
     return parser.parse_args()

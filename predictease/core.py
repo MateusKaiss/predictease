@@ -12,6 +12,7 @@ from .models.arima import ARIMAModel
 from .models.baseline import MeanModel, NaiveModel, SeasonalNaiveModel
 from .models.ml_models import MLModel
 from .models.prophet import ProphetModel
+from .seed import set_seed
 
 
 def load_and_prepare_data(
@@ -47,6 +48,7 @@ def get_model(
     activation: str,
     non_negative: bool = False,
     hidden_layers: Optional[List[int]] = None,
+    seed: Optional[int] = None,
 ) -> Union[
     ARIMAModel,
     ProphetModel,
@@ -56,6 +58,9 @@ def get_model(
     Tuple[object, pd.DataFrame],
     object,
 ]:
+    if seed is not None:
+        set_seed(seed, deep_learning=model_name in ['lstm', 'mlp'])
+
     if model_name == 'arima':
         print('\n Training ARIMA model...')
         if seasonal_length is not None and seasonal_length > 1:
@@ -93,7 +98,7 @@ def get_model(
         exog.set_index('date', inplace=True)
         X = exog.reindex(y.index).fillna(method='ffill')
 
-        model = MLModel(model_type=model_name)
+        model = MLModel(model_type=model_name, random_state=seed)
         model.fit(X, y)
         return model, exog
 
@@ -164,6 +169,7 @@ def run_model(
     future_exog: Optional[pd.DataFrame] = None,
     non_negative: bool = False,
     hidden_layers: Optional[List[int]] = None,
+    seed: Optional[int] = None,
 ):
     result = get_model(
         model,
@@ -177,6 +183,7 @@ def run_model(
         activation,
         non_negative=non_negative,
         hidden_layers=hidden_layers,
+        seed=seed,
     )
 
     if isinstance(result, tuple):
@@ -218,6 +225,7 @@ def run(
     activation: str = 'relu',
     non_negative: bool = False,
     hidden_layers: Optional[List[int]] = None,
+    seed: Optional[int] = None,
 ):
     data, y = load_and_prepare_data(endog_path, exog_path)
 
@@ -246,6 +254,7 @@ def run(
         future_exog=future_exog,
         non_negative=non_negative,
         hidden_layers=hidden_layers,
+        seed=seed,
     )
 
     print(f'\n Forecast:\n{forecast}')
