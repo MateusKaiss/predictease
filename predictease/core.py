@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -46,6 +46,7 @@ def get_model(
     hidden_units: int,
     activation: str,
     non_negative: bool = False,
+    hidden_layers: Optional[List[int]] = None,
 ) -> Union[
     ARIMAModel,
     ProphetModel,
@@ -113,6 +114,7 @@ def get_model(
                 batch_size=batch_size,
                 hidden_units=hidden_units,
                 activation=activation,
+                hidden_layers=hidden_layers,
             )
             model.fit(X, y)
             return model, exog
@@ -127,6 +129,7 @@ def get_model(
                 batch_size=batch_size,
                 hidden_units=hidden_units,
                 activation=activation,
+                hidden_layers=hidden_layers,
                 non_negative=non_negative,
             )
             model.fit(y)
@@ -160,6 +163,7 @@ def run_model(
     activation: str,
     future_exog: Optional[pd.DataFrame] = None,
     non_negative: bool = False,
+    hidden_layers: Optional[List[int]] = None,
 ):
     result = get_model(
         model,
@@ -172,6 +176,7 @@ def run_model(
         hidden_units,
         activation,
         non_negative=non_negative,
+        hidden_layers=hidden_layers,
     )
 
     if isinstance(result, tuple):
@@ -212,6 +217,7 @@ def run(
     hidden_units: int = 64,
     activation: str = 'relu',
     non_negative: bool = False,
+    hidden_layers: Optional[List[int]] = None,
 ):
     data, y = load_and_prepare_data(endog_path, exog_path)
 
@@ -239,6 +245,7 @@ def run(
         activation=activation,
         future_exog=future_exog,
         non_negative=non_negative,
+        hidden_layers=hidden_layers,
     )
 
     print(f'\n Forecast:\n{forecast}')

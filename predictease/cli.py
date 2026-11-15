@@ -64,6 +64,17 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--hidden_layers',
+        type=int,
+        nargs='+',
+        default=None,
+        help=(
+            'Units of each hidden layer in LSTM/MLP (e.g., 64 64). '
+            'Overrides --hidden_units'
+        ),
+    )
+
+    parser.add_argument(
         '--activation',
         type=str,
         default='relu',
