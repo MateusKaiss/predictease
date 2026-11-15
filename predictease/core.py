@@ -49,6 +49,8 @@ def get_model(
     non_negative: bool = False,
     hidden_layers: Optional[List[int]] = None,
     seed: Optional[int] = None,
+    l2: float = 0.0,
+    dropout: float = 0.0,
 ) -> Union[
     ARIMAModel,
     ProphetModel,
@@ -120,6 +122,8 @@ def get_model(
                 hidden_units=hidden_units,
                 activation=activation,
                 hidden_layers=hidden_layers,
+                l2=l2,
+                dropout=dropout,
             )
             model.fit(X, y)
             return model, exog
@@ -135,6 +139,8 @@ def get_model(
                 hidden_units=hidden_units,
                 activation=activation,
                 hidden_layers=hidden_layers,
+                l2=l2,
+                dropout=dropout,
                 non_negative=non_negative,
             )
             model.fit(y)
@@ -170,6 +176,8 @@ def run_model(
     non_negative: bool = False,
     hidden_layers: Optional[List[int]] = None,
     seed: Optional[int] = None,
+    l2: float = 0.0,
+    dropout: float = 0.0,
 ):
     result = get_model(
         model,
@@ -184,6 +192,8 @@ def run_model(
         non_negative=non_negative,
         hidden_layers=hidden_layers,
         seed=seed,
+        l2=l2,
+        dropout=dropout,
     )
 
     if isinstance(result, tuple):
@@ -226,6 +236,8 @@ def run(
     non_negative: bool = False,
     hidden_layers: Optional[List[int]] = None,
     seed: Optional[int] = None,
+    l2: float = 0.0,
+    dropout: float = 0.0,
 ):
     data, y = load_and_prepare_data(endog_path, exog_path)
 
@@ -255,6 +267,8 @@ def run(
         non_negative=non_negative,
         hidden_layers=hidden_layers,
         seed=seed,
+        l2=l2,
+        dropout=dropout,
     )
 
     print(f'\n Forecast:\n{forecast}')

@@ -83,6 +83,20 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--l2',
+        type=float,
+        default=0.0,
+        help='L2 regularization factor for neural network weights',
+    )
+
+    parser.add_argument(
+        '--dropout',
+        type=float,
+        default=0.0,
+        help='Dropout rate after each hidden layer of neural networks',
+    )
+
+    parser.add_argument(
         '--epochs',
         type=int,
         default=100,

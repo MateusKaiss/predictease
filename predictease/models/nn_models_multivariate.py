@@ -14,6 +14,8 @@ class LSTMModel:
         hidden_units=64,
         activation='relu',
         hidden_layers=None,
+        l2=0.0,
+        dropout=0.0,
     ):
         self.window_size = window_size
         self.epochs = epochs
@@ -21,6 +23,8 @@ class LSTMModel:
         self.hidden_units = hidden_units
         self.activation = activation
         self.hidden_layers = hidden_layers or [hidden_units]
+        self.l2 = l2
+        self.dropout = dropout
         self.scaler_X = MinMaxScaler()
         self.scaler_y = MinMaxScaler()
         self.model = None
@@ -42,7 +46,11 @@ class LSTMModel:
         )  # (samples, time_step=1, features)
 
         self.model = build_lstm(
-            (1, X_seq.shape[2]), self.hidden_layers, self.activation
+            (1, X_seq.shape[2]),
+            self.hidden_layers,
+            self.activation,
+            l2=self.l2,
+            dropout=self.dropout,
         )
         self.model.fit(
             X_seq,
@@ -74,6 +82,8 @@ class MLPModel:
         hidden_units=64,
         activation='relu',
         hidden_layers=None,
+        l2=0.0,
+        dropout=0.0,
     ):
         self.window_size = window_size
         self.epochs = epochs
@@ -81,6 +91,8 @@ class MLPModel:
         self.hidden_units = hidden_units
         self.activation = activation
         self.hidden_layers = hidden_layers or [hidden_units]
+        self.l2 = l2
+        self.dropout = dropout
         self.scaler_X = MinMaxScaler()
         self.scaler_y = MinMaxScaler()
         self.model = None
@@ -98,7 +110,11 @@ class MLPModel:
         ).flatten()
 
         self.model = build_mlp(
-            X_scaled.shape[1], self.hidden_layers, self.activation
+            X_scaled.shape[1],
+            self.hidden_layers,
+            self.activation,
+            l2=self.l2,
+            dropout=self.dropout,
         )
         self.model.fit(
             X_scaled,

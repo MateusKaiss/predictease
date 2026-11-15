@@ -14,6 +14,8 @@ class LSTMModel:
         hidden_units=64,
         activation='relu',
         hidden_layers=None,
+        l2=0.0,
+        dropout=0.0,
         non_negative=False,
     ):
         self.window_size = window_size
@@ -22,6 +24,8 @@ class LSTMModel:
         self.hidden_units = hidden_units
         self.activation = activation
         self.hidden_layers = hidden_layers or [hidden_units]
+        self.l2 = l2
+        self.dropout = dropout
         self.non_negative = non_negative
         self.scaler = MinMaxScaler()
         self.model = None
@@ -46,7 +50,11 @@ class LSTMModel:
         X = X.reshape((X.shape[0], X.shape[1], 1))
 
         self.model = build_lstm(
-            (self.window_size, 1), self.hidden_layers, self.activation
+            (self.window_size, 1),
+            self.hidden_layers,
+            self.activation,
+            l2=self.l2,
+            dropout=self.dropout,
         )
         self.model.fit(
             X, y_seq, epochs=self.epochs, batch_size=self.batch_size, verbose=0
@@ -85,6 +93,8 @@ class MLPModel:
         hidden_units=64,
         activation='relu',
         hidden_layers=None,
+        l2=0.0,
+        dropout=0.0,
         non_negative=False,
     ):
         self.window_size = window_size
@@ -93,6 +103,8 @@ class MLPModel:
         self.hidden_units = hidden_units
         self.activation = activation
         self.hidden_layers = hidden_layers or [hidden_units]
+        self.l2 = l2
+        self.dropout = dropout
         self.non_negative = non_negative
         self.scaler = MinMaxScaler()
         self.model = None
@@ -116,7 +128,11 @@ class MLPModel:
         X, y_seq = self._create_sequences(scaled_y)
 
         self.model = build_mlp(
-            self.window_size, self.hidden_layers, self.activation
+            self.window_size,
+            self.hidden_layers,
+            self.activation,
+            l2=self.l2,
+            dropout=self.dropout,
         )
         self.model.fit(
             X, y_seq, epochs=self.epochs, batch_size=self.batch_size, verbose=0
