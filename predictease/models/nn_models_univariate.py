@@ -14,12 +14,14 @@ class LSTMModel:
         batch_size=16,
         hidden_units=64,
         activation='relu',
+        non_negative=False,
     ):
         self.window_size = window_size
         self.epochs = epochs
         self.batch_size = batch_size
         self.hidden_units = hidden_units
         self.activation = activation
+        self.non_negative = non_negative
         self.scaler = MinMaxScaler()
         self.model = None
         self.last_window = None
@@ -64,11 +66,14 @@ class LSTMModel:
             raise RuntimeError('Model must be fit before predicting.')
 
         window = self.last_window.copy()
+        lower_bound = self.scaler.transform([[0.0]])[0][0]
         preds = []
 
         for _ in range(steps):
             X_input = window.reshape((1, self.window_size, 1))
             pred = self.model.predict(X_input, verbose=0)[0][0]
+            if self.non_negative:
+                pred = max(pred, lower_bound)
             preds.append(pred)
             window = np.append(window[1:], pred)
 
@@ -86,12 +91,14 @@ class MLPModel:
         batch_size=16,
         hidden_units=64,
         activation='relu',
+        non_negative=False,
     ):
         self.window_size = window_size
         self.epochs = epochs
         self.batch_size = batch_size
         self.hidden_units = hidden_units
         self.activation = activation
+        self.non_negative = non_negative
         self.scaler = MinMaxScaler()
         self.model = None
         self.last_window = None
@@ -135,11 +142,14 @@ class MLPModel:
             raise RuntimeError('Model must be fit before predicting.')
 
         window = self.last_window.copy()
+        lower_bound = self.scaler.transform([[0.0]])[0][0]
         preds = []
 
         for _ in range(steps):
             X_input = window.reshape((1, self.window_size))
             pred = self.model.predict(X_input, verbose=0)[0][0]
+            if self.non_negative:
+                pred = max(pred, lower_bound)
             preds.append(pred)
             window = np.append(window[1:], pred)
 

@@ -45,6 +45,7 @@ def get_model(
     batch_size: int,
     hidden_units: int,
     activation: str,
+    non_negative: bool = False,
 ) -> Union[
     ARIMAModel,
     ProphetModel,
@@ -126,12 +127,24 @@ def get_model(
                 batch_size=batch_size,
                 hidden_units=hidden_units,
                 activation=activation,
+                non_negative=non_negative,
             )
             model.fit(y)
             return model
 
     else:
         raise ValueError(f'Model "{model_name}" is not implemented.')
+
+
+def clip_forecast(
+    forecast: Union[pd.Series, pd.DataFrame]
+) -> Union[pd.Series, pd.DataFrame]:
+    if isinstance(forecast, pd.DataFrame):
+        forecast = forecast.copy()
+        columns = forecast.select_dtypes('number').columns
+        forecast[columns] = forecast[columns].clip(lower=0)
+        return forecast
+    return forecast.clip(lower=0)
 
 
 def run_model(
@@ -146,6 +159,7 @@ def run_model(
     hidden_units: int,
     activation: str,
     future_exog: Optional[pd.DataFrame] = None,
+    non_negative: bool = False,
 ):
     result = get_model(
         model,
@@ -157,6 +171,7 @@ def run_model(
         batch_size,
         hidden_units,
         activation,
+        non_negative=non_negative,
     )
 
     if isinstance(result, tuple):
@@ -171,12 +186,16 @@ def run_model(
             )
             X_future = exog.iloc[-forecast_steps:]
 
-        return m.predict(X_future)
+        forecast = m.predict(X_future)
+    else:
+        m = result
+        if model in ['arima', 'prophet', 'naive', 'mean', 'seasonal_naive']:
+            m.fit(y)
+        forecast = m.predict(steps=forecast_steps)
 
-    m = result
-    if model in ['arima', 'prophet', 'naive', 'mean', 'seasonal_naive']:
-        m.fit(y)
-    return m.predict(steps=forecast_steps)
+    if non_negative:
+        forecast = clip_forecast(forecast)
+    return forecast
 
 
 def run(
@@ -192,6 +211,7 @@ def run(
     batch_size: int = 16,
     hidden_units: int = 64,
     activation: str = 'relu',
+    non_negative: bool = False,
 ):
     data, y = load_and_prepare_data(endog_path, exog_path)
 
@@ -218,6 +238,7 @@ def run(
         hidden_units=hidden_units,
         activation=activation,
         future_exog=future_exog,
+        non_negative=non_negative,
     )
 
     print(f'\n Forecast:\n{forecast}')

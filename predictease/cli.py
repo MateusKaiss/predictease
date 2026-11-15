@@ -106,4 +106,10 @@ def parse_args():
         help='CSV file containing exogenous variables for forecasting (required for ML and NN models)',
     )
 
+    parser.add_argument(
+        '--non_negative',
+        action='store_true',
+        help='Clip forecasts at zero (e.g., for irradiance or demand series)',
+    )
+
     return parser.parse_args()
